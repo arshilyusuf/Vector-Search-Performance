@@ -11,4 +11,5 @@ venv/
 # OS/System files
 .DS_Store
 Thumbs.db
+.venv/
 data/sift1m/
