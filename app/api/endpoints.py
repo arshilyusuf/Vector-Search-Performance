@@ -66,9 +66,8 @@ def _run_benchmark_sync(job_id: str, req: BenchmarkRequest) -> None:
         )
 
         # ── Data generation (replace with SIFT1M loader for real data) ───
-        rng = np.random.default_rng(req.random_seed)
-        base_vectors = rng.random((req.n_vectors, req.dimension), dtype=np.float32)
-        query_vectors = rng.random((req.n_queries, req.dimension), dtype=np.float32)
+        from data.data_loader import load_sift1m
+        base_vectors, query_vectors, _ = load_sift1m(max_base=req.n_vectors)
 
         # ── Build + benchmark ─────────────────────────────────────────────
         mgr = IndexManager(dimension=req.dimension)

@@ -9,6 +9,16 @@ and attaches middleware. Run with:
 
 from __future__ import annotations
 
+import warnings
+
+# Suppress experimental MinGW and f128 RuntimeWarnings from NumPy on Windows
+warnings.filterwarnings("ignore", message=".*MINGW-W64.*")
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, module="numpy.core.getlimits"
+)
+
+import time
+from contextlib import asynccontextmanager
 import time
 from contextlib import asynccontextmanager
 from typing import AsyncIterator

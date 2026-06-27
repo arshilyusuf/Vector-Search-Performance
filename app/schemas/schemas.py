@@ -91,7 +91,7 @@ class BenchmarkRequest(BaseModel):
         Raises:
             ValueError: If any value is not a known index type.
         """
-        valid = {"IndexFlatL2", "IndexIVFFlat", "IndexHNSW"}
+        valid = {"IndexFlatL2", "IndexIVFFlat", "IndexHNSW", "IndexIVFPQ"}
         invalid = set(v) - valid
         if invalid:
             raise ValueError(

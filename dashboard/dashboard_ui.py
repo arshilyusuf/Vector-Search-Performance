@@ -5,18 +5,24 @@ Connects to the FastAPI backend, submits benchmark jobs, tracks
 progress in real-time, and renders interactive Plotly charts.
 """
 
-from __future__ import annotations
-
+import sys
+import os
+from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional
+# 1. Update the system path FIRST
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
-import httpx
+# 2. NOW perform your imports
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import streamlit as st
-
-# ---------------------------------------------------------------------------
+import httpx
+from typing import Any, Dict, List, Optional
+from app.utils.system import get_system_metrics
+import dotenv
 # Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
 
@@ -30,10 +36,15 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Constants / helpers
 # ---------------------------------------------------------------------------
-
+API_BASE = os.getenv("API_URL", "http://127.0.0.1:8080")
+st.sidebar.subheader("System Info")
+metrics = get_system_metrics()
+st.sidebar.write(f"**CPU:** {metrics['CPU']}")
+st.sidebar.write(f"**RAM:** {metrics['RAM_Total_GB']} GB")
+# ---------------------------------------------------------------------------
 API_BASE = st.sidebar.text_input(
     "API Base URL",
-    value="http://localhost:8000",
+    value="http://localhost:8080",
     help="Root URL of the running FastAPI backend.",
 )
 
@@ -45,6 +56,24 @@ INDEX_COLOR_MAP = {
     "IndexIVFFlat": "#DD8452",
     "IndexHNSW": "#55A868",
 }
+from fpdf import FPDF
+
+
+def create_pdf_report(results_df, config):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, txt="Vector Search Benchmark Report", ln=True, align="C")
+    pdf.set_font("Arial", size=12)
+    # Add configuration details
+    pdf.cell(200, 10, txt=f"Base Vectors: {config['n_vectors']}", ln=True)
+    pdf.cell(200, 10, txt=f"Dimension: {config['dimension']}", ln=True)
+    # Add table data
+    for index, row in results_df.iterrows():
+        pdf.cell(
+            200, 10, txt=f"Index: {row['Index']}, Recall: {row['Recall@K']}", ln=True
+        )
+    return pdf.output(dest="S").encode("latin-1")
 
 
 def _get(path: str) -> Dict[str, Any]:
@@ -107,7 +136,7 @@ selected_indexes = st.sidebar.multiselect(
 )
 
 k_values_input = st.sidebar.text_input("K values (comma-separated)", "1,10,100")
-nlist = st.sidebar.slider("IVF nlist", 10, 500, 100)
+nlist = st.sidebar.slider("IVF nlist", 10, 4096, 100)
 nprobe = st.sidebar.slider("IVF nprobe", 1, 100, 10)
 hnsw_m = st.sidebar.slider("HNSW M", 8, 128, 32)
 
@@ -140,10 +169,12 @@ with col_start:
         use_container_width=True,
         disabled=len(selected_indexes) == 0,
     )
-
+if "k_values" not in st.session_state:
+    st.session_state["k_values"] = [1, 10, 100]
 if run_clicked:
     try:
         k_values = [int(k.strip()) for k in k_values_input.split(",") if k.strip()]
+        st.session_state["k_values"] = k_values
         payload = {
             "n_vectors": n_vectors,
             "n_queries": n_queries,
@@ -349,14 +380,45 @@ if report:
             ),
             use_container_width=True,
         )
-        st.download_button(
-            "⬇ Download CSV",
-            df.to_csv(index=False),
-            file_name="benchmark_results.csv",
-            mime="text/csv",
-        )
+        col_csv, col_pdf = st.columns(2)
+
+        with col_csv:
+            st.download_button(
+                "⬇ Download CSV",
+                df.to_csv(index=False),
+                file_name="benchmark_results.csv",
+                mime="text/csv",
+            )
+
+        with col_pdf:
+            # Assuming you implemented create_pdf_report(df, config)
+            # You'll need to pass your config dictionary here
+            benchmark_config = {
+                "n_vectors": n_vectors,
+                "n_queries": n_queries,
+                "dimension": dimension,
+                "index_types": selected_indexes,
+                "k_values": k_values,
+                "nlist": nlist,
+                "nprobe": nprobe,
+                "hnsw_m": hnsw_m,
+            }
+            pdf_data = create_pdf_report(df, benchmark_config)
+            st.download_button(
+                "📄 Download PDF",
+                pdf_data,
+                file_name="benchmark_report.pdf",
+                mime="application/pdf",
+            )
+
 
 elif job_id is None:
     st.info(
         "👈 Configure parameters in the sidebar and click **Run Benchmark** to start."
     )
+
+try:
+    # Force the app to run
+    st.write("Dashboard loading...")
+except Exception as e:
+    st.error(f"Critical error: {e}")

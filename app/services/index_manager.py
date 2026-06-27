@@ -20,11 +20,10 @@ logger = get_logger(__name__)
 
 
 class IndexType(str, Enum):
-    """Supported FAISS index types."""
-
     FLAT_L2 = "IndexFlatL2"
     IVF_FLAT = "IndexIVFFlat"
     HNSW = "IndexHNSW"
+    IVF_PQ = "IndexIVFPQ"  # Add this line
 
 
 class IndexBuildError(Exception):
@@ -98,6 +97,9 @@ class IndexManager:
                 v, nlist=nlist, nprobe=nprobe
             ),
             IndexType.HNSW: lambda v: self._build_hnsw(v, m=hnsw_m),
+            IndexType.IVF_PQ: lambda v: self._build_ivf_pq(
+                v, nlist=nlist, nprobe=nprobe
+            ),  
         }
 
         try:
@@ -266,3 +268,16 @@ class IndexManager:
         if vectors.ndim != 2:
             raise ValueError(f"Expected 2-D array, got shape {vectors.shape}")
         return np.ascontiguousarray(vectors, dtype=np.float32)
+
+    def _build_ivf_pq(
+        self, vectors: np.ndarray, *, nlist: int, nprobe: int
+    ) -> faiss.Index:
+        m = 8  # Number of sub-quantizers
+        nbits = 8  # Bits per sub-quantizer
+        quantiser = faiss.IndexFlatL2(self.dimension)
+        # IVF_PQ uses the quantiser to find the cell, then PQ for compression
+        index = faiss.IndexIVFPQ(quantiser, self.dimension, nlist, m, nbits)
+        index.train(vectors)
+        index.add(vectors)
+        index.nprobe = nprobe
+        return index
