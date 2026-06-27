@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  # ── FastAPI Backend ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: vspp-api
+    ports:
+      - "8000:8000"
+    environment:
+      LOG_LEVEL: INFO
+      DEBUG: "false"
+      WORKER_THREADS: "4"
+      DATA_DIR: /data/sift1m
+    volumes:
+      - sift1m_data:/data/sift1m
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - vspp-net
+
+  # ── Streamlit Dashboard ─────────────────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: vspp-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vspp-net
+
+volumes:
+  sift1m_data:
+    driver: local
+
+networks:
+  vspp-net:
+    driver: bridge
