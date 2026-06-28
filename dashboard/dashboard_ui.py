@@ -36,7 +36,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Constants / helpers
 # ---------------------------------------------------------------------------
-API_BASE = os.getenv("API_URL", "http://127.0.0.1:8080")
+API_BASE = os.getenv("API_URL", "http://127.0.0.1:8000")
 st.sidebar.subheader("System Info")
 metrics = get_system_metrics()
 st.sidebar.write(f"**CPU:** {metrics['CPU']}")
@@ -44,7 +44,7 @@ st.sidebar.write(f"**RAM:** {metrics['RAM_Total_GB']} GB")
 # ---------------------------------------------------------------------------
 API_BASE = st.sidebar.text_input(
     "API Base URL",
-    value="http://localhost:8080",
+    value="http://localhost:8000",
     help="Root URL of the running FastAPI backend.",
 )
 
@@ -398,7 +398,7 @@ if report:
                 "n_queries": n_queries,
                 "dimension": dimension,
                 "index_types": selected_indexes,
-                "k_values": k_values,
+                "k_values": st.session_state["k_values"],
                 "nlist": nlist,
                 "nprobe": nprobe,
                 "hnsw_m": hnsw_m,
@@ -417,8 +417,4 @@ elif job_id is None:
         "👈 Configure parameters in the sidebar and click **Run Benchmark** to start."
     )
 
-try:
-    # Force the app to run
-    st.write("Dashboard loading...")
-except Exception as e:
-    st.error(f"Critical error: {e}")
+
