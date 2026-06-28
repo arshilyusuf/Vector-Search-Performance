@@ -25,8 +25,18 @@ import plotly.express as px
 import plotly.graph_objects as go
 import httpx
 from typing import Any, Dict, List, Optional
-from app.utils.system import get_system_metrics
-import dotenv
+import psutil
+import platform
+
+
+def get_system_metrics():
+    return {
+        "CPU": platform.processor(),
+        "RAM_Total_GB": round(psutil.virtual_memory().total / (1024**3), 2),
+        "OS": platform.system(),
+    }
+
+
 # Page config (must be first Streamlit call)
 # ---------------------------------------------------------------------------
 

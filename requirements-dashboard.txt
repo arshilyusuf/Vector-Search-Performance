@@ -3,3 +3,4 @@ plotly>=5.24.1
 pandas>=2.2.3
 httpx>=0.27.2
 fpdf2
+psutil
