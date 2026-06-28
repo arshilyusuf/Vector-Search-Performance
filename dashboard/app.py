@@ -4,7 +4,7 @@ Streamlit Dashboard — Vector Search Performance Profiler.
 Connects to the FastAPI backend, submits benchmark jobs, tracks
 progress in real-time, and renders interactive Plotly charts.
 """
-
+import threading
 import sys
 import os
 from pathlib import Path
@@ -27,6 +27,14 @@ import httpx
 from typing import Any, Dict, List, Optional
 import psutil
 import platform
+def _keep_alive():
+    """Silently ping the API to prevent Render cold starts."""
+    try:
+        with httpx.Client(timeout=5) as client:
+            client.get(f"{API_BASE}/health")
+    except Exception:
+        pass  # Never crash the dashboard over this
+threading.Thread(target=_keep_alive, daemon=True).start()
 
 
 def get_system_metrics():
@@ -170,7 +178,7 @@ with col_health:
         health = _get("/health")
         st.success(f"API: {health.get('status', 'unknown').upper()}")
     except Exception:
-        st.error("API: OFFLINE")
+        st.warning("API warming up… retry in 30s")
 
 # ---------------------------------------------------------------------------
 # Run benchmark
