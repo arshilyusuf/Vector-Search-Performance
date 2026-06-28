@@ -66,9 +66,17 @@ def _run_benchmark_sync(job_id: str, req: BenchmarkRequest) -> None:
         )
 
         # ── Data generation (replace with SIFT1M loader for real data) ───
-        from data.data_loader import load_sift1m
-        base_vectors, query_vectors, _ = load_sift1m(max_base=req.n_vectors)
-
+        # from data.data_loader import load_sift1m
+        # base_vectors, query_vectors, _ = load_sift1m(max_base=req.n_vectors)
+        # FIND:
+        # REPLACE WITH:
+        from data.data_loader import generate_clustered_data
+        base_vectors, query_vectors = generate_clustered_data(
+            n_vectors=req.n_vectors,
+            n_queries=req.n_queries,
+            dimension=req.dimension,
+            seed=req.random_seed,
+        )
         # ── Build + benchmark ─────────────────────────────────────────────
         mgr = IndexManager(dimension=req.dimension)
         engine = BenchmarkEngine(index_manager=mgr, k_values=req.k_values)

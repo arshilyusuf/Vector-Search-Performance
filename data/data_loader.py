@@ -255,3 +255,54 @@ def generate_synthetic_data(
         query.shape,
     )
     return base, query
+
+
+def generate_clustered_data(
+    n_vectors: int = 100_000,
+    n_queries: int = 1_000,
+    dimension: int = 128,
+    n_clusters: int = 256,
+    seed: int = 42,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Generate clustered float32 vectors that mimic real embedding distributions.
+
+    Real embeddings (SIFT, text, image) are clustered in space, not uniform.
+    This produces realistic Recall@K values for ANN benchmarks.
+
+    Args:
+        n_vectors: Number of base vectors.
+        n_queries: Number of query vectors.
+        dimension: Vector dimensionality.
+        n_clusters: Number of cluster centres (more = more realistic).
+        seed: NumPy random seed for reproducibility.
+
+    Returns:
+        Tuple of (base_vectors, query_vectors) as float32 arrays.
+    """
+    rng = np.random.default_rng(seed)
+
+    # Generate cluster centres
+    centres = rng.standard_normal((n_clusters, dimension)).astype(np.float32)
+
+    # Assign each base vector to a random cluster and add small noise
+    assignments = rng.integers(0, n_clusters, size=n_vectors)
+    noise_scale = 0.05  # tight clusters → high recall
+    base = (
+        centres[assignments]
+        + rng.standard_normal((n_vectors, dimension)).astype(np.float32) * noise_scale
+    )
+
+    # Queries come from the same cluster distribution
+    q_assignments = rng.integers(0, n_clusters, size=n_queries)
+    query = (
+        centres[q_assignments]
+        + rng.standard_normal((n_queries, dimension)).astype(np.float32) * noise_scale
+    )
+
+    logger.info(
+        "Generated clustered data — base: %s, query: %s, clusters: %d",
+        base.shape,
+        query.shape,
+        n_clusters,
+    )
+    return base, query
