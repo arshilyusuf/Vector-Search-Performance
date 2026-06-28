@@ -16,6 +16,10 @@ if str(project_root) not in sys.path:
 
 # 2. NOW perform your imports
 import streamlit as st
+if hasattr(st, "secrets") and "API_BASE_URL" in st.secrets:
+    API_BASE_DEFAULT = st.secrets["API_BASE_URL"]
+else:
+    API_BASE_DEFAULT = "http://localhost:8000"
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -36,7 +40,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Constants / helpers
 # ---------------------------------------------------------------------------
-API_BASE = os.getenv("API_URL", "http://127.0.0.1:8000")
+API_BASE = os.getenv("API_URL", "http://localhost:8000")
 st.sidebar.subheader("System Info")
 metrics = get_system_metrics()
 st.sidebar.write(f"**CPU:** {metrics['CPU']}")
@@ -44,7 +48,7 @@ st.sidebar.write(f"**RAM:** {metrics['RAM_Total_GB']} GB")
 # ---------------------------------------------------------------------------
 API_BASE = st.sidebar.text_input(
     "API Base URL",
-    value="http://localhost:8000",
+    value=API_BASE_DEFAULT,
     help="Root URL of the running FastAPI backend.",
 )
 
@@ -416,5 +420,3 @@ elif job_id is None:
     st.info(
         "👈 Configure parameters in the sidebar and click **Run Benchmark** to start."
     )
-
-

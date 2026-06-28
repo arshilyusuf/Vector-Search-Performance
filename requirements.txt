@@ -23,5 +23,5 @@ pytest-cov==6.0.0
 ruff==0.8.4
 mypy==1.13.0
 psutil
-FPDF
+fpdf==1.7.2
 
